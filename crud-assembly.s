@@ -1,21 +1,24 @@
 .section .data
 	# Property struct
 	id:					.int	0		# 0:	32-bit int
-	ownerName:			.space	144		# 4:	char[36]
-	ownerPhone:			.space	60		# 148:	char[15]
-	propType:			.byte	0		# 208:	bool
-	addrCity:			.space	144		# 209:	char[36]
-	addrDist:			.space	144		# 353:	char[36]
-	bedroomN:			.int	0		# 497:	32-bit int
-	suiteN:				.int	0		# 501:	32-bit int
-	hasGarage:			.byte	0		# 505:	bool
-	sqrMeters:			.int	0		# 506:	32-bit int
-	rentPrice:			.int	0		# 510:	32-bit int
-	nextNode:			.int	0		# 514:	32-bit int
+	ownerName:			.space	36		# 4:	char[36]
+	ownerPhone:			.space	15		# 40:	char[15]
+	propType:			.byte	0		# 55:	bool
+	addrCity:			.space	36		# 56:	char[36]
+	addrDist:			.space	36		# 92:	char[36]
+	bedroomN:			.int	0		# 128:	32-bit int
+	suiteN:				.int	0		# 132:	32-bit int
+	hasGarage:			.byte	0		# 136:	bool
+	sqrMeters:			.int	0		# 137:	32-bit int
+	rentPrice:			.int	0		# 141:	32-bit int
+
+	nextNode:			.int	0		# 145:	32-bit int
 
 	# Output strings
 	opening:			.asciz	"\nPrograma para cadastro e consulta de imóveis\n"
-	menuOp:				.asciz	"\nMenu de Opcoes\n<1> Cadastrar imóvel\n<2> Remover imóvel\n<3> Consultar imóveis\n<4> Exibir relatório\n<5> Finalizar\nDigite opcao => "
+	menuOp:				.asciz	"\nMenu de Opções\n<1> Cadastrar imóvel\n<2> Remover imóvel\n<3> Consultar imóveis\n<4> Exibir relatório\n<5> Finalizar\nDigite opcao => "
+	errorOpeningFile:	.asciz	"\nHouve um erro ao abrir o arquivo, nenhuma propriedaade será lida."
+	propertyNRead:		.asciz	"\nPropriedades lidas do disco: %d\n"
 
 	ownerNamePrompt:	.asciz	"\nInforme o nome do proprietário => "
 	ownerPhonePrompt:	.asciz	"Informe o telefone do proprietário (somente números) => "
@@ -53,10 +56,16 @@
 	lastNode:			.int	0
 	pProperty:			.int	0
 	nextId:				.int	1
+	propertyN:			.int	0
 
 	# Constants
 	fileName:			.asciz	"properties.txt"
-	structSize:			.int	518
+	structSize:			.int	145
+	nodeSize:			.int	149
+
+.section .bss
+	.lcomm structBuffer, 145
+	.lcomm fileHandle, 4
 
 .section .text
 .globl _start
@@ -67,21 +76,22 @@ _start:
 	addl	$4, %esp				# Undo last push
 
 	call	readProperties			# Read properties saved on file to memory
-	
-	call	optionsMenu				# Show options menu to user and get option
+
+_mainMenu:
+	call	showMainMenu			# Show options menu to user and get option
 
 	cmpl	$5, option				# If option was 5, finalize program
 	je	_end
 
 	call	handleOptions			# Else, redirect to chosen functionality
 	
-	jmp	_start						# After done, start again
+	jmp	_mainMenu					# After done, start again
 
 _end:
 	pushl	$0						# Successful execution code
 	call	exit					# Finish program
 
-optionsMenu:
+showMainMenu:
 	pushl	$intFormat				# Push int format string
 	pushl	$option					# Push option variable to store result
 	pushl	$menuOp					# Push option menu query string
@@ -106,9 +116,64 @@ handleOptions:
 	RET
 
 readProperties:
+_openFile:
+	movl	$5, %eax				# Load system call value for `fopen` to eax
+	movl	$fileName, %ebx			# Load file name to ebx
+	movl	$0102, %ecx				# Load read write permission flag to ecx
+	movl	$0644, %edx				# Load permissions flag to edx
+	int	$0x80						# Execute system call
+	
+	test	%eax, %eax				# If eax is positive, sucess
+	js	_badFile					# Else, error opening file
+
+	movl	%eax, fileHandle		# Store file handle
+
+_readNextStruct:
+	movl	$3, %eax				# Load system call value `read` to eax
+	movl	fileHandle, %ebx		# Load file handle to ebx
+	movl	$structBuffer, %ecx		# Load buffer to ecx
+	movl	$structSize, %edx		# Load number of bytes to be read to edx
+	int	$0x80						# Execute system call
+	
+	test	%eax, %eax				# If eax <= 0, EOF
+	js	_closeFile
+	jz	_closeFile
+
+	call	createNewNode			# Allocate memory for the struct
+
+	leal	structBuffer, %esi
+	leal	0(%edx), %edi
+	movl	$structSize, %ecx
+	cld
+	rep movsb
+
+	movl	$propertyN, %eax
+	inc		%eax
+	movl	%eax, propertyN
+
+_closeFile:
+	movl	fileHandle, %ebx
+	movl	$6, %eax
+	int	$0x80
+
+	pushl	propertyN
+	pushl	$propertyNRead
+	call	printf
+	addl	$8, %esp
+
 	RET
 
+_badFile:
+	pushl	$errorOpeningFile		# Push error message
+	call	printf					# Print error message
+	addl	$4, %esp				# Undo last push
+
 createProperty:
+	movl	nextId, %eax
+	movl	%eax, id
+	incl	%eax
+	movl	%eax, nextId
+
 	pushl	$strFormat
 	pushl	$ownerName
 	pushl	$ownerNamePrompt
@@ -172,32 +237,8 @@ createProperty:
 	movl	$0, nextNode
 
 _initializeStruct:
-	pushl	$structSize				# Push struct size for allocation
-	call	malloc					# Allocate memory for the struct
-	addl	$4, %esp				# Undo last push
-	movl	%eax, pProperty			# Move pointer for allocated memory to eax
-
-	movl	pProperty, %edx			# Move struct pointer to edx
+	call	createNewNode			# Allocate memory for the struct
 	call	writeVariablesToStruct	# Write all variables to the struct allocated memory
-
-_addToLinkedList:
-	movl	firstNode, %eax			# Move pointer to the first node to eax
-	cmpl	$0, %eax				# If there are no nodes yet, first and last node will be this one
-	je	_addFirstNode
-
-_updateLastNode:
-	movl	%edx, %ebx				# Move struct pointer to ebx, freeing edx
-	movl	lastNode, %edx			# Move pointer to last node of list to edx
-	movl	%ebx, 514(%edx)			# Move struct pointer to "next node" position of last node
-	movl	%ebx, lastNode			# Update last node pointer with struct pointer
-
-	RET
-
-_addFirstNode:
-	movl	%edx, firstNode			# Update first node with struct pointer
-	movl	%edx, lastNode			# Update last node also, since it is the only node
-
-	RET
 
 deleteProperty:
 	RET
@@ -211,14 +252,14 @@ showProperties:
 _printProperty:
 	call	readStructToVariables	# Read struct bytes to variables
 
-	pushl	$id
+	pushl	id
 	pushl	$idInfo
 	call	printf
 	addl	$8, %esp
 
 	pushl	$ownerName
 	pushl	$ownerNameInfo
-	call	print
+	call	printf
 	addl	$8, %esp
 
 	pushl	$ownerPhone
@@ -270,13 +311,12 @@ _printProperty:
 	call	printf
 	addl	$8, %esp
 
-_readNextStruct:
+_loadNextStruct:
 	movl	nextNode, %edx			# Move pointer of next node on the list to edx
 	cmpl	$0, %edx				# If the pointer is not zero, there are still more nodes to be printed
 	jne		_printProperty
 
 	RET
-
 
 #### UTIL
 getInput:							# (PROMPT, ADDR, FORMAT)
@@ -297,6 +337,33 @@ getInput:							# (PROMPT, ADDR, FORMAT)
 
 	RET
 
+createNewNode:
+	pushl	$nodeSize				# Push struct size for allocation
+	call	malloc					# Allocate memory for the struct
+	addl	$4, %esp				# Undo last push
+	movl	%eax, pProperty			# Move pointer for allocated memory to eax
+
+	movl	pProperty, %edx			# Move struct pointer to edx
+	
+_addToLinkedList:
+	movl	firstNode, %eax			# Move pointer to the first node to eax
+	cmpl	$0, %eax				# If there are no nodes yet, first and last node will be this one
+	je	_addFirstNode
+
+_updateLastNode:
+	movl	%edx, %ebx				# Move struct pointer to ebx, freeing edx
+	movl	lastNode, %edx			# Move pointer to last node of list to edx
+	movl	%ebx, 145(%edx)			# Move struct pointer to "next node" position of last node
+	movl	%ebx, lastNode			# Update last node pointer with struct pointer
+
+	RET
+
+_addFirstNode:
+	movl	%edx, firstNode			# Update first node with struct pointer
+	movl	%edx, lastNode			# Update last node also, since it is the only node
+
+	RET
+
 writeVariablesToStruct:				# EDX: pointer to the struct
 	movl	id, %ecx
 	movl	%ecx, 0(%edx)
@@ -308,43 +375,43 @@ writeVariablesToStruct:				# EDX: pointer to the struct
 	rep movsb
 
 	leal	ownerPhone, %esi
-	leal	148(%edx), %edi
+	leal	40(%edx), %edi
 	movl	$60, %ecx
 	cld
 	rep movsb
 
 	movb	propType, %cl
-	movb	%cl, 208(%edx)
+	movb	%cl, 55(%edx)
 
 	leal	addrCity, %esi
-	leal	209(%edx), %edi
+	leal	56(%edx), %edi
 	movl	$144, %ecx
 	cld
 	rep movsb
 
 	leal	addrDist, %esi
-	leal	353(%edx), %edi
+	leal	92(%edx), %edi
 	movl	$144, %ecx
 	cld
 	rep movsb
 
 	movl	bedroomN, %ecx
-	movl	%ecx, 497(%edx)
+	movl	%ecx, 128(%edx)
 
 	movl	suiteN, %ecx
-	movl	%ecx, 501(%edx)
+	movl	%ecx, 132(%edx)
 
 	movb	hasGarage, %cl
-	movb	%cl, 505(%edx)
+	movb	%cl, 136(%edx)
 
 	movl	sqrMeters, %ecx
-	movl	%ecx, 506(%edx)
+	movl	%ecx, 137(%edx)
 
 	movl	rentPrice, %ecx
-	movl	%ecx, 510(%edx)
+	movl	%ecx, 141(%edx)
 	
 	movl	nextNode, %ecx
-	movl	%ecx, 514(%edx)
+	movl	%ecx, 145(%edx)
 
 	RET
 
@@ -358,43 +425,43 @@ readStructToVariables:
 	cld
 	rep movsb
 
-	leal	148(%edx), %esi
+	leal	40(%edx), %esi
 	leal	ownerPhone, %edi
 	movl	$60, %ecx
 	cld
 	rep movsb
 
-	movb	208(%edx), %cl
+	movb	55(%edx), %cl
 	movb	%cl, propType
 
-	leal	209(%edx), %esi
+	leal	56(%edx), %esi
 	leal	addrCity, %edi
 	movl	$144, %ecx
 	cld
 	rep movsb
 
-	leal	353(%edx), %esi
+	leal	92(%edx), %esi
 	leal	addrDist, %edi
 	movl	$144, %ecx
 	cld
 	rep movsb
 
-	movl	497(%edx), %ecx
+	movl	128(%edx), %ecx
 	movl	%ecx, bedroomN
 
-	movl	501(%edx), %ecx
+	movl	132(%edx), %ecx
 	movl	%ecx, suiteN
 
-	movb	505(%edx), %cl
+	movb	136(%edx), %cl
 	movb	%cl, hasGarage
 
-	movl	506(%edx), %ecx
+	movl	137(%edx), %ecx
 	movl	%ecx, sqrMeters
 	
-	movl	510(%edx), %ecx
+	movl	141(%edx), %ecx
 	movl	%ecx, rentPrice
 	
-	movl	514(%edx), %ecx
+	movl	145(%edx), %ecx
 	movl	%ecx, nextNode
 
 	RET
