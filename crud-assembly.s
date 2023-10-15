@@ -1,3 +1,7 @@
+#Douglas Kenji Sakakibara RA117741
+#Felipe Gabriel Comin Scheffel RA117306
+
+
 .section .data
     # Property struct
     id:                 .int        0   # 0:    32-bit int
@@ -73,71 +77,71 @@
 .globl _start
 _start:
     nop
-    pushl   $opening                    # Push opening message to stack
-    call    printf                      # Print opening message
-    addl    $4, %esp                    # Undo last push
+    pushl   $opening                    # Push da mensagem de abertura para a pilha
+    call    printf                      # Print da mensagem de abertura
+    addl    $4, %esp                    # Desfaz o ultimo push
 
-    call    readPropertiesFromFile      # Read properties saved on file to memory
+    call    readPropertiesFromFile      # Leitura das propriedas salvas no arquivo em memoria
 
 _mainMenu:
-    call    showMainMenu                # Show options menu to user and get option
+    call    showMainMenu                # Chama a funcao showMainMenu 
 
-    cmpl    $5, option                  # If option was 5, finalize program
+    cmpl    $5, option                  # Se a opção selecionada for 5, o programa é encerrado 
     je      _end
 
-    call    handleOptions               # Else, redirect to chosen functionality
+    call    handleOptions               # Senão, a função handleOptions é chamada 
     
-    jmp     _mainMenu                   # After done, start again
+    jmp     _mainMenu                   # Após terminado, começa novamente e mostra o menu inicial
 
 _end:
-    pushl   $0                          # Successful execution code
-    call    exit                        # Finish program
-
+    pushl   $0                          # O programa foi executado com sucesso
+    call    exit                        # Programa é encerrado 
+#Essa função apresenta as opções disponiveis para o usuário e recebe a opção selecionada pelo usuário
 showMainMenu:
     pushl   $intFormat                  # Push int format string
-    pushl   $option                     # Push option variable to store result
-    pushl   $menuOp                     # Push option menu query string
-    call    getInput                    # Get user input
-    addl    $12, %esp                   # Undo last 3 pushes
+    pushl   $option                     # Push da variável que armazena a opção selecionada do menu 
+    pushl   $menuOp                     # Push do menu de opções a ser selecionado pelo usuário 
+    call    getInput                    # Chama a função getInput 
+    addl    $12, %esp                   # Desfaz os últimos 3 push 
     
     RET
-
+#Essa função direciona o usuário para opção selecionada
 handleOptions:
-    cmpl    $1, option                  # If option chosen was 1, create new property from input
+    cmpl    $1, option                  # Se a opção selecionada for 1, a função createProperty é chamada 
     je      createProperty
 
-    cmpl    $2, option                  # Else if option chosen was 2, delete a property
+    cmpl    $2, option                  # Se a opção selecionada for 2, a função deleteProperty é chamada 
     je      deleteProperty                
 
-    cmpl    $3, option                  # Else if option chosen was 3, query properties by room number
+    cmpl    $3, option                  # Se a opção selecionada for 3, a função queryProperties é chamada 
     je      queryProperties
     
-    cmpl    $4, option                  # Else if option chosen was 4, show all properties
+    cmpl    $4, option                  # Se a opção selecionada for 4, a função showProperties é chaamda
     je      showProperties
 
     RET
-
+#Cria um novo registro de um imóvel para locação
 createProperty:
     movl    nextId, %eax
     movl    %eax, id
-    incl    %eax
-    movl    %eax, nextId
+    incl    %eax                        # Incrementa o id para o próximo registro a ser cadastrado 
+    movl    %eax, nextId                # Armazena o valor do id para o próximo registro a ser cadastrado na váriavel nextId
 
-    pushl   $strFormat
-    pushl   $ownerName
-    pushl   $ownerNamePrompt
+    pushl   $strFormat                  # Push do formato da variável
+    pushl   $ownerName                  # Push da endereço da variável da struct  
+    pushl   $ownerNamePrompt            # Push do prompt
+    call    getInput                    # Chama a função getInput para receber a entrada do usuário
+    addl    $12, %esp                   # Desfaz os últimos 3 push
+
+    pushl   $strFormat                 
+    pushl   $ownerPhone                   
+    pushl   $ownerPhonePrompt           
     call    getInput
     addl    $12, %esp
 
-    pushl   $strFormat
-    pushl   $ownerPhone
-    pushl   $ownerPhonePrompt
-    call    getInput
-    addl    $12, %esp
-
-    pushl   $byteFormat
-    pushl   $propType
-    pushl   $propTypePrompt
+    pushl   $byteFormat                 
+    pushl   $propType                     
+    pushl   $propTypePrompt             
     call    getInput
     addl    $12, %esp
 
@@ -186,30 +190,30 @@ createProperty:
     movl    $0, nextNode
 
 _saveNewPropertyStruct:
-    call    createNewNode               # Allocate memory for the struct and add to list
-    call    writeVariablesToStruct      # Write all variables to the struct allocated memory
-    call    saveStructsToFile           # Save updated list with new struct
-
+    call    createNewNode               # A função createNewNode é chamada 
+    call    writeVariablesToStruct      # A função writeVariablesToStruct é chamada 
+    call    saveStructsToFile           # A função saveStructsToFile é chamada 
     RET
 
 deleteProperty:
     RET
-
+# Pesquisa um imovél cadastrado e gravado no arquivo usando como parâmetro o número de quartos do imóvel
 queryProperties:
     RET
 
+# Mostra os imoveis que foram registrados e salvos no arquivo
 showProperties:
-    movl    firstNode, %edx             # Move pointer to first node to edx
-    test    %edx, %edx                  # If the first node is not zero, start printing
-    jz      _emptyProperties            # Else, there are no properties
+    movl    firstNode, %edx             # Move o ponteiro que aponta para o primeiro nó da lista para edx 
+    test    %edx, %edx                  # Se o primeiro nó da lista não for zero, as informações dos imóveis registrados serão mostrados
+    jz      _emptyProperties            # Senão não existe nenhum registro de imóvel cadastrado
 
 _printNextProperty:
-    call    readStructToVariables       # Read struct bytes to variables
+    call    readStructToVariables       # Chama a função readStructToVariables para fazer a leitura e mostrar os registros/ Read struct bytes to variables
 
-    pushl   id
-    pushl   $idInfo
+    pushl   id                          # Push da variável da struct
+    pushl   $idInfo                     # Push do prompt
     call    printf
-    addl    $8, %esp
+    addl    $8, %esp                    # Desfaz os últimos 2 push
 
     pushl   $ownerName
     pushl   $ownerNameInfo
@@ -265,8 +269,8 @@ _printNextProperty:
     call    printf
     addl    $8, %esp
 
-    movl    nextNode, %edx              # Move pointer of next node on the list to edx
-    test    %edx, %edx                  # If the pointer is not zero, there are still more nodes to be printed
+    movl    nextNode, %edx              # Move o ponteiro que aponta para próximo nó da lista para o edx
+    test    %edx, %edx                  # Se o valor movido para edx não for zero, ainda existe registros a serem mostrados
     jnz     _printNextProperty
 
     RET
@@ -279,52 +283,56 @@ _emptyProperties:
     RET
 
 #### UTIL
+# Pega o valor de cada campo do registro de um imovél digitado pelo usuário
+# Nessa função os argumentos(Mensagem do campo do registro, endereço da variável, formato da variável) são passados utilizando a pilha
 getInput:                               # (PROMPT, ADDR, FORMAT)
-    pushl   %ebp                        # Save original value of ebp
-    movl    %esp, %ebp                  # Copy current esp stack pointer to ebp
+    pushl   %ebp                        # Salva o valor original de ebp 
+    movl    %esp, %ebp                  # Copia o ponteiro atual da pilha esp para ebp Copy current esp stack pointer to ebp
 
     pushl   8(%ebp)                     # Push prompt string
     call    printf                      # Print prompt
-    addl    $4, %esp                    # Undo last push
+    addl    $4, %esp                    # Desfaz o último push
 
-    pushl   12(%ebp)                    # Push input variable address
+    pushl   12(%ebp)                    # Push o endereço da varáivel 
     pushl   16(%ebp)                    # Push input format string
-    call    scanf                       # Scan for user input
-    addl    $8, %esp                    # Undo last 2 pushes
+    call    scanf                       # Leitura da entrada digitada pelo usuário 
+    addl    $8, %esp                    # Desfaz os últimos dois push
     
-    movl    %ebp, %esp                  # Restore original stack pointer
-    popl    %ebp                        # Restore original ebp
+    movl    %ebp, %esp                  # Recupera o ponteiro da pilha 
+    popl    %ebp                        # Recupera o registrador ebp original  
 
     RET
 
+# Aloca espaço de memória para a struct e adiciona na lista encadeada
 createNewNode:
-    pushl   $nodeSize                   # Push struct size for allocation
-    call    malloc                      # Allocate memory for the struct
-    addl    $4, %esp                    # Undo last push
-    movl    %eax, pProperty             # Move pointer for allocated memory to eax
+    pushl   $nodeSize                   # Push do tamanho da struct para a alocar espaço de memória 
+    call    malloc                      # Aloca mémoria para a struct 
+    addl    $4, %esp                    # Desfaz o último push
+    movl    %eax, pProperty             # Move o ponteiro da memória alocada para o eax 
     
 _addToLinkedList:
-    movl    firstNode, %eax             # Move pointer to the first node to eax
-    test    %eax, %eax                  # If there are no nodes yet, first and last node will be this one
+    movl    firstNode, %eax             # Move o ponteiro que aponta para o primeiro nó para o eax 
+    test    %eax, %eax                  # Se não existir nenhum no registro, o primeiro e o último nó serão o que está sendo registrado no momento
     jz      _addFirstNode
 
 _updateLastNode:
-    movl    pProperty, %ebx             # Move struct pointer to ebx
-    movl    lastNode, %edx              # Move pointer to last node of list to edx
-    movl    %ebx, 145(%edx)             # Move struct pointer to "next node" position of last node
-    movl    %ebx, lastNode              # Update last node pointer with struct pointer
+    movl    pProperty, %ebx             # Move o ponteiro da struct para o ebx 
+    movl    lastNode, %edx              # Move o ponteiro do último nó da lista para edx 
+    movl    %ebx, 145(%edx)             # Move o ponteiro da struct para a posição do último nó da lista 
+    movl    %ebx, lastNode              # Atualiza o ponteiro do último nó com o ponteiro da struct 
     movl    %ebx, %edx
 
     RET
 
 _addFirstNode:
-    movl    pProperty, %edx             # Move struct pointer to edx
-    movl    %edx, firstNode             # Update first node with struct pointer
-    movl    %edx, lastNode              # Update last node also, since it is the only node
+    movl    pProperty, %edx             # Move o ponteiro da struct para edx
+    movl    %edx, firstNode             # Atualiza o ponteiro do primeiro nó com o ponteiro da struct 
+    movl    %edx, lastNode              # Atualiza o ponteiro do último com o ponteiro da struct, pois esse é ainda o primeiro adicionado 
 
     RET
 
-writeVariablesToStruct:                 # EDX: pointer to the struct
+# Escreve as variáveis que possuem as informações do imovél na struct alocada
+writeVariablesToStruct:                 # EDX: Ponteiro da struct
     movl    id, %ecx
     movl    %ecx, 0(%edx)
 
@@ -374,7 +382,7 @@ writeVariablesToStruct:                 # EDX: pointer to the struct
     movl    %ecx, 145(%edx)
 
     RET
-
+# Realiza a leitura dos bytes da struct que contem os dados do imovél e armazena os valores nas variaveis para serem mostradas para o usuário
 readStructToVariables:
     movl    0(%edx), %ecx
     movl    %ecx, id
@@ -425,16 +433,16 @@ readStructToVariables:
     movl    %ecx, nextNode
 
     RET
-
+# Abertura do arquivo 
 openFile:
-    movl    $5, %eax                    # Load system call value for `fopen` to eax
-    movl    $fileName, %ebx             # Load file name to ebx
-    movl    $0102, %ecx                 # Load read write permission flag to ecx
-    movl    $0644, %edx                 # Load permissions flag to edx
-    int     $0x80                       # Execute system call
+    movl    $5, %eax                    # Carrega o valor da chamada de sistema para `fopen` para eax 
+    movl    $fileName, %ebx             # Carega o nome do arquivo para ebx 
+    movl    $0102, %ecx                 # Carrega a flag de permissão de leitura e escrita para ecx 
+    movl    $0644, %edx                 # Carrega a flag de permissões para edx 
+    int     $0x80                       # Executa a chamada de sistema
 
     RET
-
+# Fechamento do arquivo
 closeFile:
     movl    fileHandle, %ebx
     movl    $6, %eax
@@ -442,113 +450,113 @@ closeFile:
 
     RET
 
+# Salva as structs alocadas que possuem as informações dos imóveis no arquivo
 saveStructsToFile:
     call    openFile
     
-    test    %eax, %eax                  # If eax is positive, sucess
-    js      _errorReadingFile           # Else, error opening file
+    test    %eax, %eax                  # Se eax é positivo, o arquivo foi aberto com sucesso 
+    js      _errorReadingFile           # Senão, ocorreu um erro na abertura do arquivo 
 
-    movl    %eax, fileHandle            # Store file handle
+    movl    %eax, fileHandle            # Armazena file handle
     movl    firstNode, %edx
 
     movl    $0, propertyN
 
 _saveNextStruct:
-    test    %edx, %edx                  # If edx != 0, there is at least one node to save
-    jz      _endOfList                  # Else, no more nodes
+    test    %edx, %edx                  # Se edx edx != 0, existe pelo menos um nó(registro) para salvar no arquivo 
+    jz      _endOfList                  # Senão, não exite nenhum nó(registro) para salvar
 
-    pushl   145(%edx)                   # Backup next node
+    pushl   145(%edx)                   # Backup do próximo nó 
     
-    leal    0(%edx), %esi               # From struct
-    leal    structBuffer, %edi          # To buffer
-    movl    structSize, %ecx            # Move structSize bytes
+    leal    0(%edx), %esi               # Da struct 
+    leal    structBuffer, %edi          # Para o buffer
+    movl    structSize, %ecx            # Move o tamanho da struct para o ecx
     cld
     rep     movsb
     
-    movl    $4, %eax                    # Load system call value `write` to eax
-    movl    fileHandle, %ebx            # Load file handle to ebx
-    movl    $structBuffer, %ecx         # Load buffer address to ecx
-    movl    structSize, %edx            # Load struct size to edx
-    int     $0x80                       # Execute system call
+    movl    $4, %eax                    # Carrega o valor da chamada de sistema `write` para eax 
+    movl    fileHandle, %ebx            # Carrega o file handle para ebx 
+    movl    $structBuffer, %ecx         # Carrega o endereço do buffer para o ecx 
+    movl    structSize, %edx            # Carrega o tamanho da struct para o edx 
+    int     $0x80                       # Executa a chamada de sistema 
 
-    test    %eax, %eax                  # If eax >= 0, write was succesful
-    js      _errorWritingToFile         # Else, error writing
+    test    %eax, %eax                  # Se eax >=0, a escrita foi realizada com sucesso 
+    js      _errorWritingToFile         # Senão, ocorreu um erro na escrita 
 
     movl    propertyN, %eax
-    incl    %eax                        # Increment number of properties written by 1
+    incl    %eax                        # Incrementa por um o número de registros escritos 
     movl    %eax, propertyN
 
-    popl    %edx                        # Pop backup of next node
+    popl    %edx                        # Pop backup do próximo nó
     jmp     _saveNextStruct
 
 _endOfList:
-    call    closeFile
+    call    closeFile                   # Chama a função closeFile para fechar o arquivo
 
-    pushl   propertyN
-    pushl   $propertyNWritten
+    pushl   propertyN                   # Push da variável propertyN
+    pushl   $propertyNWritten           # Push da mensagem de saída propertyNWritten
     call    printf
-    addl    $8, %esp
+    addl    $8, %esp                    # Desfaz os últimos dois push
 
     RET
 
 _errorWritingToFile:
-    pushl   $errorOpeningFile           # Push error message
-    call    printf                      # Print error message
-    addl    $4, %esp                    # Undo last push
+    pushl   $errorOpeningFile           # Push da mensagem de erro error message
+    call    printf                      # Print da mensagem de erro error message
+    addl    $4, %esp                    # Desfaz o último push
 
     RET
-
+# Leitura dos registros dos imóveis do arquivo 
 readPropertiesFromFile:
     call    openFile
     
-    test    %eax, %eax                  # If eax is positive, sucess
-    js      _errorReadingFile           # Else, error opening file
+    test    %eax, %eax                  # Se eax é positivo, a leitura do registro armazenado no arquivo foi realizada com sucesso
+    js      _errorReadingFile           # Senão ocorreu um erro na leitura do arquivo 
 
-    movl    %eax, fileHandle            # Store file handle
+    movl    %eax, fileHandle            # Armazena o file handle 
 
 _readNextStruct:
-    movl    $3, %eax                    # Load system call value `read` to eax
-    movl    fileHandle, %ebx            # Load file handle to ebx
-    movl    $structBuffer, %ecx         # Load buffer to ecx
-    movl    structSize, %edx            # Load number of bytes to be read to edx
-    int     $0x80                       # Execute system call
+    movl    $3, %eax                    # Carrega o valor da chamada de sistema `read` para o eax 
+    movl    fileHandle, %ebx            # Carrega o file handle para o ebx 
+    movl    $structBuffer, %ecx         # Carrega o buffer para o ecx 
+    movl    structSize, %edx            # Carrega o número de bytes a ser lido para o edx 
+    int     $0x80                       # Executa a chamada de sistema 
     
-    test    %eax, %eax                  # If eax <= 0, EOF
+    test    %eax, %eax                  # Se eax <= 0, EOF
     js      _endOfFile
     jz      _endOfFile
 
-    call    createNewNode               # Allocate memory for the struct
+    call    createNewNode               # Chama a função createNewNode para alocar espaço na memória para a struct
 
-    leal    structBuffer, %esi          # From buffer
-    leal    0(%edx), %edi               # To struct
-    movl    structSize, %ecx            # move structSize bytes
+    leal    structBuffer, %esi          # Do buffer
+    leal    0(%edx), %edi               # Para a struct
+    movl    structSize, %ecx            # Move o tamanho da struct(quantidade de bytes da struct) para o ecx 
     cld
     rep     movsb
 
     movl    propertyN, %eax
-    incl    %eax                        # Increment number of structs read by 1
-    movl    %eax, propertyN
+    incl    %eax                        # Incrementa por um o número de structs que foram lidas 
+    movl    %eax, propertyN             # Move o valor para propertyN(número de registros)
 
     jmp     _readNextStruct
 
 _endOfFile:
-    call    closeFile
-
-    pushl   propertyN
-    pushl   $propertyNRead
+    call    closeFile                   # Chama a função closeFile para fechar o arquivo 
+    pushl   propertyN                   # Push da variável propertyN
+    pushl   $propertyNRead              # Push da mensagem de saída propertyNRead
     call    printf
-    addl    $8, %esp
+    addl    $8, %esp                    # Desfaz os último dois push
 
-    movl    propertyN, %eax
-    incl    %eax
-    movl    %eax, nextId
+    movl    propertyN, %eax             
+    incl    %eax                        # Incrementa por um o número de structs que foram lidas
+    movl    %eax, nextId                # Move o valor para nextId
 
     RET
 
 _errorReadingFile:
-    pushl   $errorOpeningFile           # Push error message
-    call    printf                      # Print error message
-    addl    $4, %esp                    # Undo last push
+    pushl   $errorOpeningFile           # Push da mensagem de erro da leitura do arquivo 
+    call    printf                      # Print da mensagem de erro 
+    addl    $4, %esp                    # Desfaz o último push
 
     RET
  
