@@ -3,7 +3,7 @@
 
 
 .section .data
-    # Property struct
+    # Struct do imóvel
     id:                 .int        0   # 0:    32-bit int
     ownerName:          .space      36  # 4:    char[36]
     ownerPhone:         .space      15  # 40:   char[15]
@@ -18,7 +18,7 @@
 
     nextNode:           .int        0   # 145:  32-bit int
 
-    # Output strings
+    # Strings de output
     opening:            .asciz      "\nPrograma para cadastro e consulta de imóveis\n"
     menuOp:             .asciz      "\nMenu de Opções\n<1> Cadastrar imóvel\n<2> Remover imóvel\n<3> Consultar imóveis\n<4> Exibir relatório\n<5> Finalizar\nDigite opcao => "
     errorOpeningFile:   .asciz      "\nHouve um erro ao abrir o arquivo, nenhuma propriedaade será lida."
@@ -49,14 +49,14 @@
     sqrMetersInfo:      .asciz      "\nÁrea em metros quadrados: %d"
     rentPriceInfo:      .asciz      "\nPreço do aluguel: %d\n"
 
-    # Input format strings
+    # Strings de formatos para input
     intFormat:          .asciz      "%d"
     longFormat:         .asciz      "%ld"
     strFormat:          .asciz      "%s"
     wSpaceStrFormat:    .asciz      "%35[^\n]%*c"
     byteFormat:         .asciz      "%1d"
 
-    # Variables
+    # Variáveis gerais
     option:             .int        0
     firstNode:          .int        0
     lastNode:           .int        0
@@ -64,7 +64,7 @@
     nextId:             .int        1
     propertyN:          .int        0
 
-    # Constants
+    # Constantes
     fileName:           .asciz      "properties.txt"
     structSize:         .int        145
     nodeSize:           .int        149
@@ -96,17 +96,21 @@ _mainMenu:
 _end:
     pushl   $0                          # O programa foi executado com sucesso
     call    exit                        # Programa é encerrado 
-#Essa função apresenta as opções disponiveis para o usuário e recebe a opção selecionada pelo usuário
-showMainMenu:
-    pushl   $intFormat                  # Push int format string
+
+showMainMenu:                           
+    # Apresenta as opções disponiveis para o usuário e recebe a opção selecionada pelo usuário
+
+    pushl   $intFormat                  # Push da string de formatação para int
     pushl   $option                     # Push da variável que armazena a opção selecionada do menu 
     pushl   $menuOp                     # Push do menu de opções a ser selecionado pelo usuário 
     call    getInput                    # Chama a função getInput 
     addl    $12, %esp                   # Desfaz os últimos 3 push 
     
     RET
-#Essa função direciona o usuário para opção selecionada
+
 handleOptions:
+    # Direciona o usuário para opção selecionada
+
     cmpl    $1, option                  # Se a opção selecionada for 1, a função createProperty é chamada 
     je      createProperty
 
@@ -116,12 +120,14 @@ handleOptions:
     cmpl    $3, option                  # Se a opção selecionada for 3, a função queryProperties é chamada 
     je      queryProperties
     
-    cmpl    $4, option                  # Se a opção selecionada for 4, a função showProperties é chaamda
+    cmpl    $4, option                  # Se a opção selecionada for 4, a função showProperties é chamada
     je      showProperties
 
     RET
-#Cria um novo registro de um imóvel para locação
+
 createProperty:
+    # Cria um novo registro de um imóvel para locação
+    
     movl    nextId, %eax
     movl    %eax, id
     incl    %eax                        # Incrementa o id para o próximo registro a ser cadastrado 
@@ -132,6 +138,8 @@ createProperty:
     pushl   $ownerNamePrompt            # Push do prompt
     call    getInput                    # Chama a função getInput para receber a entrada do usuário
     addl    $12, %esp                   # Desfaz os últimos 3 push
+
+    # Repetir processo para todos os campos
 
     pushl   $strFormat                 
     pushl   $ownerPhone                   
@@ -190,30 +198,35 @@ createProperty:
     movl    $0, nextNode
 
 _saveNewPropertyStruct:
-    call    createNewNode               # A função createNewNode é chamada 
-    call    writeVariablesToStruct      # A função writeVariablesToStruct é chamada 
-    call    saveStructsToFile           # A função saveStructsToFile é chamada 
+    call    createNewNode               # Cria novo nó na posição adequada da lista com a memória alocada para a struct
+    call    writeVariablesToStruct      # Escreve as variáveis na memória da struct
+    call    saveStructsToFile           # Salva lista atualizada no disco
     RET
 
 deleteProperty:
-    RET
-# Pesquisa um imovél cadastrado e gravado no arquivo usando como parâmetro o número de quartos do imóvel
-queryProperties:
+    # Remove uma propriedade escolhida a partir de seu ID
     RET
 
-# Mostra os imoveis que foram registrados e salvos no arquivo
+queryProperties:
+    # Pesquisa um imovél cadastrado e gravado no arquivo usando como parâmetro o número de quartos do imóvel
+    RET
+
+
 showProperties:
+    # Mostra os imoveis que foram registrados
     movl    firstNode, %edx             # Move o ponteiro que aponta para o primeiro nó da lista para edx 
     test    %edx, %edx                  # Se o primeiro nó da lista não for zero, as informações dos imóveis registrados serão mostrados
-    jz      _emptyProperties            # Senão não existe nenhum registro de imóvel cadastrado
+    jz      _emptyProperties            # Se não, não existe nenhum registro de imóvel cadastrado
 
 _printNextProperty:
-    call    readStructToVariables       # Chama a função readStructToVariables para fazer a leitura e mostrar os registros/ Read struct bytes to variables
+    call    readStructToVariables       # Carrega os dados da estrutura para as variáveis
 
     pushl   id                          # Push da variável da struct
     pushl   $idInfo                     # Push do prompt
     call    printf
     addl    $8, %esp                    # Desfaz os últimos 2 push
+
+    # Repetir processo para todos os campos
 
     pushl   $ownerName
     pushl   $ownerNameInfo
@@ -283,9 +296,11 @@ _emptyProperties:
     RET
 
 #### UTIL
-# Pega o valor de cada campo do registro de um imovél digitado pelo usuário
-# Nessa função os argumentos(Mensagem do campo do registro, endereço da variável, formato da variável) são passados utilizando a pilha
-getInput:                               # (PROMPT, ADDR, FORMAT)
+
+getInput:                               
+    # Exibe uma mensagem de prompt e recebe um input do usuário
+    # Args: (PROMPT, ADDR, FORMAT)
+
     pushl   %ebp                        # Salva o valor original de ebp 
     movl    %esp, %ebp                  # Copia o ponteiro atual da pilha esp para ebp Copy current esp stack pointer to ebp
 
@@ -303,8 +318,9 @@ getInput:                               # (PROMPT, ADDR, FORMAT)
 
     RET
 
-# Aloca espaço de memória para a struct e adiciona na lista encadeada
 createNewNode:
+    # Aloca espaço de memória para a struct e adiciona na lista encadeada
+
     pushl   $nodeSize                   # Push do tamanho da struct para a alocar espaço de memória 
     call    malloc                      # Aloca mémoria para a struct 
     addl    $4, %esp                    # Desfaz o último push
@@ -331,8 +347,11 @@ _addFirstNode:
 
     RET
 
-# Escreve as variáveis que possuem as informações do imovél na struct alocada
-writeVariablesToStruct:                 # EDX: Ponteiro da struct
+
+writeVariablesToStruct:
+    # Escreve as variáveis que possuem as informações do imovél na struct alocada
+    # Args: (edx: STRUCT_PNTR)
+
     movl    id, %ecx
     movl    %ecx, 0(%edx)
 
@@ -382,8 +401,11 @@ writeVariablesToStruct:                 # EDX: Ponteiro da struct
     movl    %ecx, 145(%edx)
 
     RET
-# Realiza a leitura dos bytes da struct que contem os dados do imovél e armazena os valores nas variaveis para serem mostradas para o usuário
+
 readStructToVariables:
+    # Realiza a leitura dos bytes da struct que contem os dados do imóvel e armazena os valores nas variaveis
+    # Args: (edx: STRUCT_PNTR)
+
     movl    0(%edx), %ecx
     movl    %ecx, id
 
@@ -433,8 +455,9 @@ readStructToVariables:
     movl    %ecx, nextNode
 
     RET
-# Abertura do arquivo 
+
 openFile:
+    # Abertura do arquivo
     movl    $5, %eax                    # Carrega o valor da chamada de sistema para `fopen` para eax 
     movl    $fileName, %ebx             # Carega o nome do arquivo para ebx 
     movl    $0102, %ecx                 # Carrega a flag de permissão de leitura e escrita para ecx 
@@ -442,16 +465,18 @@ openFile:
     int     $0x80                       # Executa a chamada de sistema
 
     RET
-# Fechamento do arquivo
+
 closeFile:
-    movl    fileHandle, %ebx
-    movl    $6, %eax
-    int     $0x80
+    # Fechamento do arquivo
+    movl    $6, %eax                    # Carrega o valor da chamada de sistema para `fclose` para eax 
+    movl    fileHandle, %ebx            # Carega o handle do arquivo para ebx
+    int     $0x80                       # Executa chamada de sistema
 
     RET
 
-# Salva as structs alocadas que possuem as informações dos imóveis no arquivo
 saveStructsToFile:
+    # Salva as structs alocadas que possuem as informações dos imóveis no arquivo
+
     call    openFile
     
     test    %eax, %eax                  # Se eax é positivo, o arquivo foi aberto com sucesso 
@@ -506,8 +531,10 @@ _errorWritingToFile:
     addl    $4, %esp                    # Desfaz o último push
 
     RET
-# Leitura dos registros dos imóveis do arquivo 
+
 readPropertiesFromFile:
+    # Leitura dos registros dos imóveis do arquivo 
+
     call    openFile
     
     test    %eax, %eax                  # Se eax é positivo, a leitura do registro armazenado no arquivo foi realizada com sucesso
